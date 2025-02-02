@@ -72,7 +72,7 @@ public:
     virtual ~Expr() = default;
     virtual void Print(std::ostream& out) const = 0;
     virtual void DoPrintFormula(std::ostream& out, ExprPrecedence precedence) const = 0;
-    virtual double Evaluate(/*добавьте сюда нужные аргументы*/ args) const = 0;
+    virtual double Evaluate(SheetInterface& sheet) const = 0;
 
     // higher is tighter
     virtual ExprPrecedence GetPrecedence() const = 0;
@@ -142,8 +142,32 @@ public:
         }
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/) const override {
-			// Скопируйте ваше решение из предыдущих уроков.
+    double Evaluate(SheetInterface& sheet) const override {
+        double result = 0.0;
+
+        switch (type_) {
+            case Add:
+                result = lhs_->Evaluate(sheet) + rhs_->Evaluate(sheet);
+                break;
+            case Subtract:
+                result = lhs_->Evaluate(sheet) - rhs_->Evaluate(sheet);
+                break;
+            case Multiply:
+                result = lhs_->Evaluate(sheet) * rhs_->Evaluate(sheet) * 1.0;
+                break;
+            case Divide: {
+                result = lhs_->Evaluate(sheet) / rhs_->Evaluate(sheet) * 1.0;
+                break;
+            }
+            default:
+                throw FormulaException("Unsupported operation type");
+        }
+
+        if (std::isfinite(result)) {
+            return result;
+        } else {
+            throw FormulaError(FormulaError::Category::Arithmetic);
+        }
     }
 
 private:
@@ -180,8 +204,15 @@ public:
         return EP_UNARY;
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/ args) const override {
-        // Скопируйте ваше решение из предыдущих уроков.
+    double Evaluate(SheetInterface& sheet) const override {
+        switch (type_) {
+            case UnaryPlus:
+                return operand_->Evaluate(sheet);
+            case UnaryMinus:
+                return operand_->Evaluate(sheet) * - 1.0;
+            default:
+                return operand_->Evaluate(sheet);
+        }
     }
 
 private:
@@ -211,11 +242,38 @@ public:
         return EP_ATOM;
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/ args) const override {
-        // реализуйте метод.
+    double Evaluate(SheetInterface& sheet) const override {
+        if (!(*cell_).IsValid()) {
+            throw FormulaError(FormulaError::Category::Ref);
+        }
+        if (!sheet.GetCell(*cell_)) {
+            return 0.0;
+        }
+        
+        auto value = sheet.GetCell(*cell_)->GetValue();
+        if (std::holds_alternative<double>(value)) {
+            return std::get<double>(value);
+        } else if (std::holds_alternative<std::string>(value)) {
+            auto s = std::get<std::string>(value);
+            if (s.empty()) {
+                return 0;
+            }
+            if (OnlyDigits(s)) {
+                return std::stod(s);
+            }
+            throw FormulaError(FormulaError::Category::Value);
+        } else if (std::holds_alternative<FormulaError>(value)) {
+            throw FormulaError(std::get<FormulaError>(value).GetCategory());
+        } else {
+            return 0.0;
+        }
     }
 
 private:
+    bool OnlyDigits(const std::string& str) const {
+        return !str.empty() && std::all_of(str.begin(), str.end(), ::isdigit);
+    }
+
     const Position* cell_;
 };
 
@@ -237,7 +295,7 @@ public:
         return EP_ATOM;
     }
 
-    double Evaluate(/*добавьте нужные аргументы*/ args) const override {
+    double Evaluate(SheetInterface& sheet) const override {
         return value_;
     }
 
@@ -391,14 +449,22 @@ void FormulaAST::PrintFormula(std::ostream& out) const {
     root_expr_->PrintFormula(out, ASTImpl::EP_ATOM);
 }
 
-double FormulaAST::Execute(/*добавьте нужные аргументы*/ args) const {
-    return root_expr_->Evaluate(/*добавьте нужные аргументы*/ args);
+double FormulaAST::Execute(SheetInterface& sheet) const {
+    return root_expr_->Evaluate(sheet);
 }
 
 FormulaAST::FormulaAST(std::unique_ptr<ASTImpl::Expr> root_expr, std::forward_list<Position> cells)
     : root_expr_(std::move(root_expr))
     , cells_(std::move(cells)) {
     cells_.sort();  // to avoid sorting in GetReferencedCells
+}
+
+std::forward_list<Position>& FormulaAST::GetCells()  {
+    return cells_;
+}
+
+const std::forward_list<Position>& FormulaAST::GetCells() const {
+    return cells_;
 }
 
 FormulaAST::~FormulaAST() = default;

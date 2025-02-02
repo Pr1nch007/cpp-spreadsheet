@@ -39,7 +39,7 @@ public:
     enum class Category {
         Ref,    // ссылка на ячейку с некорректной позицией
         Value,  // ячейка не может быть трактована как число
-        Div0,  // в результате вычисления возникло деление на ноль
+        Arithmetic,  // в результате вычисления возникло деление на ноль
     };
 
     FormulaError(Category category);
@@ -56,12 +56,6 @@ private:
 
 std::ostream& operator<<(std::ostream& output, FormulaError fe);
 
-// Исключение, выбрасываемое при попытке передать в метод некорректную позицию
-class InvalidPositionException : public std::out_of_range {
-public:
-    using std::out_of_range::out_of_range;
-};
-
 // Исключение, выбрасываемое при попытке задать синтаксически некорректную
 // формулу
 class FormulaException : public std::runtime_error {
@@ -75,6 +69,22 @@ class CircularDependencyException : public std::runtime_error {
 public:
     using std::runtime_error::runtime_error;
 };
+
+// Исключение, выбрасываемое при попытке передать в метод некорректную позицию
+class InvalidPositionException : public std::out_of_range {
+public:
+    using std::out_of_range::out_of_range;
+};
+
+// Исключение, выбрасываемое, если вставка строк/столбцов в таблицу приведёт к
+// ячейке с позицией больше максимально допустимой
+class TableTooBigException : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
+inline constexpr char FORMULA_SIGN = '=';
+inline constexpr char ESCAPE_SIGN = '\'';
 
 class CellInterface {
 public:
@@ -92,31 +102,18 @@ public:
     // редактирование. В случае текстовой ячейки это её текст (возможно,
     // содержащий экранирующие символы). В случае формулы - её выражение.
     virtual std::string GetText() const = 0;
-
     // Возвращает список ячеек, которые непосредственно задействованы в данной
     // формуле. Список отсортирован по возрастанию и не содержит повторяющихся
     // ячеек. В случае текстовой ячейки список пуст.
     virtual std::vector<Position> GetReferencedCells() const = 0;
 };
 
-inline constexpr char FORMULA_SIGN = '=';
-inline constexpr char ESCAPE_SIGN = '\'';
-
 // Интерфейс таблицы
 class SheetInterface {
 public:
     virtual ~SheetInterface() = default;
 
-    // Задаёт содержимое ячейки. Если текст начинается со знака "=", то он
-    // интерпретируется как формула. Если задаётся синтаксически некорректная
-    // формула, то бросается исключение FormulaException и значение ячейки не
-    // изменяется. Если задаётся формула, которая приводит к циклической
-    // зависимости (в частности, если формула использует текущую ячейку), то
-    // бросается исключение CircularDependencyException и значение ячейки не
-    // изменяется.
-    // Уточнения по записи формулы:
-    // * Если текст содержит только символ "=" и больше ничего, то он не считается
-    // формулой
+    // Задаёт содержимое ячейки.
     // * Если текст начинается с символа "'" (апостроф), то при выводе значения
     // ячейки методом GetValue() он опускается. Можно использовать, если нужно
     // начать текст со знака "=", но чтобы он не интерпретировался как формула.
