@@ -27,6 +27,8 @@ private:
 	// Можете дополнить ваш класс нужными полями и методами
     void CollapseRows ();
     void CollapseCols ();
+    
+    void CheckPosIsValid (Position pos) const;
 
     std::vector<std::vector<std::unique_ptr<Cell>>> table_;
     Size min_area_;

@@ -72,7 +72,7 @@ public:
     virtual ~Expr() = default;
     virtual void Print(std::ostream& out) const = 0;
     virtual void DoPrintFormula(std::ostream& out, ExprPrecedence precedence) const = 0;
-    virtual double Evaluate(SheetInterface& sheet) const = 0;
+    virtual double Evaluate(const SheetInterface& sheet) const = 0;
 
     // higher is tighter
     virtual ExprPrecedence GetPrecedence() const = 0;
@@ -142,23 +142,24 @@ public:
         }
     }
 
-    double Evaluate(SheetInterface& sheet) const override {
+    double Evaluate(const SheetInterface& sheet) const override {
         double result = 0.0;
+        double left_leg = lhs_->Evaluate(sheet) * 1.0;
+        double right_leg = rhs_->Evaluate(sheet) * 1.0;
 
         switch (type_) {
             case Add:
-                result = lhs_->Evaluate(sheet) + rhs_->Evaluate(sheet);
+                result = left_leg + right_leg;
                 break;
             case Subtract:
-                result = lhs_->Evaluate(sheet) - rhs_->Evaluate(sheet);
+                result = left_leg - right_leg;
                 break;
             case Multiply:
-                result = lhs_->Evaluate(sheet) * rhs_->Evaluate(sheet) * 1.0;
+                result = left_leg * right_leg;
                 break;
-            case Divide: {
-                result = lhs_->Evaluate(sheet) / rhs_->Evaluate(sheet) * 1.0;
+            case Divide:
+                result = left_leg / right_leg;
                 break;
-            }
             default:
                 throw FormulaException("Unsupported operation type");
         }
@@ -204,7 +205,7 @@ public:
         return EP_UNARY;
     }
 
-    double Evaluate(SheetInterface& sheet) const override {
+    double Evaluate(const SheetInterface& sheet) const override {
         switch (type_) {
             case UnaryPlus:
                 return operand_->Evaluate(sheet);
@@ -242,7 +243,7 @@ public:
         return EP_ATOM;
     }
 
-    double Evaluate(SheetInterface& sheet) const override {
+    double Evaluate(const SheetInterface& sheet) const override {
         if (!(*cell_).IsValid()) {
             throw FormulaError(FormulaError::Category::Ref);
         }
@@ -295,7 +296,7 @@ public:
         return EP_ATOM;
     }
 
-    double Evaluate(SheetInterface& sheet) const override {
+    double Evaluate(const SheetInterface& sheet) const override {
         return value_;
     }
 
@@ -449,7 +450,7 @@ void FormulaAST::PrintFormula(std::ostream& out) const {
     root_expr_->PrintFormula(out, ASTImpl::EP_ATOM);
 }
 
-double FormulaAST::Execute(SheetInterface& sheet) const {
+double FormulaAST::Execute(const SheetInterface& sheet) const {
     return root_expr_->Evaluate(sheet);
 }
 

@@ -43,7 +43,7 @@ private:
 class Impl {
     public:
     virtual ~Impl() {}
-    virtual Cell::Value GetValue(SheetInterface& sheet) const = 0;
+    virtual Cell::Value GetValue(const SheetInterface& sheet) const = 0;
     virtual std::string GetText() const = 0;
     virtual TypeImpl GetType() const = 0;
     virtual std::unordered_set<Cell*> GetSetCells(SheetInterface& sheet) = 0;
@@ -52,7 +52,7 @@ class Impl {
 
 class EmptyImpl : public Impl {
     public:
-    Cell::Value GetValue(SheetInterface& sheet) const override;
+    Cell::Value GetValue(const SheetInterface& sheet) const override;
     std::string GetText() const override;
     TypeImpl GetType() const override;
     std::unordered_set<Cell*> GetSetCells(SheetInterface& sheet) override;
@@ -62,7 +62,7 @@ class EmptyImpl : public Impl {
 class TextImpl : public Impl {
     public:
     TextImpl (const std::string& text);
-    Cell::Value GetValue(SheetInterface& sheet) const override;
+    Cell::Value GetValue(const SheetInterface& sheet) const override;
     std::string GetText() const override;
     TypeImpl GetType() const override;
     std::unordered_set<Cell*> GetSetCells(SheetInterface& sheet) override;
@@ -75,7 +75,7 @@ class TextImpl : public Impl {
 class FormulaImpl : public Impl {
     public:
     FormulaImpl (const std::string& text);
-    Cell::Value GetValue(SheetInterface& sheet) const override;
+    Cell::Value GetValue(const SheetInterface& sheet) const override;
     std::string GetText() const override;
     TypeImpl GetType() const override;
     std::unordered_set<Cell*> GetSetCells(SheetInterface& sheet) override;

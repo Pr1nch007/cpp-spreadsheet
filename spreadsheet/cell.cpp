@@ -8,14 +8,14 @@
 TypeImpl CheckType (const std::string& text) {
     if (text.empty()) {
         return EMPTY;
-    } else if (text[0] == '=' && text[1]) {
+    } else if (text[0] == FORMULA_SIGN && text[1]) {
         return FORMULA;
     } else {
         return TEXT;
     }
 }
 
-Cell::Value Cell::EmptyImpl::GetValue(SheetInterface& sheet) const {
+Cell::Value Cell::EmptyImpl::GetValue(const SheetInterface& sheet) const {
     return "";
 }
 
@@ -40,8 +40,8 @@ std::vector<Position> Cell::EmptyImpl::GetVectorCells() {
 
 Cell::TextImpl::TextImpl (const std::string& text) : text_(text) {}
 
-Cell::Value Cell::TextImpl::GetValue(SheetInterface& sheet) const {
-    if (text_[0] == '\'') {
+Cell::Value Cell::TextImpl::GetValue(const SheetInterface& sheet) const {
+    if (text_[0] == ESCAPE_SIGN) {
         if (text_.size() > 1){
             return text_.substr(1);
         } else {
@@ -72,7 +72,7 @@ std::vector<Position> Cell::TextImpl::GetVectorCells() {
 
 Cell::FormulaImpl::FormulaImpl (const std::string& text) : formula_(std::move(ParseFormula(text))) {}
 
-Cell::Value Cell::FormulaImpl::GetValue(SheetInterface& sheet) const {
+Cell::Value Cell::FormulaImpl::GetValue(const SheetInterface& sheet) const {
     auto result = formula_->Evaluate(sheet);
     if (std::holds_alternative<double>(result)) {
         return std::get<double>(result);
@@ -82,7 +82,7 @@ Cell::Value Cell::FormulaImpl::GetValue(SheetInterface& sheet) const {
 }
 
 std::string Cell::FormulaImpl::GetText() const {
-    return '=' + formula_->GetExpression();
+    return FORMULA_SIGN + formula_->GetExpression();
 }
 
 TypeImpl Cell::FormulaImpl::GetType() const {
@@ -105,7 +105,6 @@ std::vector<Position> Cell::FormulaImpl::GetVectorCells() {
 }
 
 Cell::Cell(SheetInterface& sheet) : impl_ (std::move(std::make_unique<EmptyImpl>())), sheet_(sheet){
-//    sheet_ = std::move(sheet);
 }
 
 Cell::~Cell() {}
@@ -145,7 +144,7 @@ void Cell::Set(std::string text) {
 }
 
 void Cell::Clear() {
-    impl_ = std::make_unique<EmptyImpl>();
+    impl_ = std::make_unique<EmptyImpl>();//больше Impl::Set нигде не используется, стоит ради очищения ячейки создавать этот метод у классов Impl?
 }
 
 Cell::Value Cell::GetValue() const {

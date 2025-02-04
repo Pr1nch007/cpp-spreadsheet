@@ -12,10 +12,15 @@ using namespace std::literals;
 
 Sheet::~Sheet() {}
 
-void Sheet::SetCell(Position pos, std::string text) {
+void Sheet::CheckPosIsValid (Position pos) const {
     if (!pos.IsValid()) {
         throw InvalidPositionException("InvalidPosition");
     }
+}
+
+void Sheet::SetCell(Position pos, std::string text) {
+    CheckPosIsValid(pos);
+
     while (table_.size() <= static_cast<size_t>(pos.row)) {
         if (table_.size() == 0) {
             table_.emplace_back();
@@ -49,9 +54,8 @@ void Sheet::SetCell(Position pos, std::string text) {
 }
 
 const CellInterface* Sheet::GetCell(Position pos) const {
-    if (!pos.IsValid()) {
-        throw InvalidPositionException("");
-    }
+    CheckPosIsValid(pos);
+
     if (min_area_.rows <= pos.row || min_area_.cols <= pos.col) {
         return nullptr;
     }
@@ -64,9 +68,8 @@ const CellInterface* Sheet::GetCell(Position pos) const {
     }
 }
 CellInterface* Sheet::GetCell(Position pos) {
-    if (!pos.IsValid()) {
-        throw InvalidPositionException("");
-    }
+    CheckPosIsValid(pos);
+
     if (min_area_.rows <= pos.row || min_area_.cols <= pos.col) {
         return nullptr;
     }
@@ -103,9 +106,8 @@ void Sheet::CollapseCols () {
 }
 
 void Sheet::ClearCell(Position pos) {
-    if (!pos.IsValid()) {
-        throw InvalidPositionException("");
-    }
+    CheckPosIsValid(pos);
+
     if (min_area_.rows <= pos.row || min_area_.cols <= pos.col) {
         return;
     }

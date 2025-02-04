@@ -44,7 +44,7 @@ public:
         throw FormulaException ("incorrect formula");
     }
 
-    Value Evaluate(SheetInterface& sheet) const override {
+    Value Evaluate(const SheetInterface& sheet) const override {
         try {
             return ast_.Execute(sheet);
         } catch (const FormulaError& error) {
